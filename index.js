@@ -80,7 +80,12 @@ async function run() {
   if (email) query.email = email;
    
    let sortQuery = { date: -1 };
-
+    
+   // Sort Conditions
+  if (sort === "high") sortQuery = { amount: -1 };
+  if (sort === "low") sortQuery = { amount: 1 };
+  if (sort === "new") sortQuery = { date: -1 };
+  if (sort === "old") sortQuery = { date: 1 };
   // MongoDB backend sorting
   const result = await transactionCollection
     .find(query)
