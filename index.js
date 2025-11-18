@@ -46,29 +46,7 @@ async function run() {
       }
     });
 
-    app.get("/transactions", async (req, res) => {
-      const projectFields = {
-        type: 1,
-        category: 1,
-        amount: 1,
-        description: 1,
-        date: 1,
-        email: 1,
-        name: 1,
-      };
-      console.log(req.query);
-      const email = req.query.email;
-      const query = {};
-      if (email) {
-        query.email = email;
-      }
-      const cursor = transactionCollection.find(query);
-      const data = await cursor.toArray();
-      const sorted = data.sort((a, b) => Number(b.amount) - Number(a.amount));
-      res.send(sorted);
-    });
-
-
+  
 
 
 
@@ -76,16 +54,18 @@ async function run() {
   const email = req.query.email;
   const sort = req.query.sort; // <-- frontend theke pathano sort type
 
-   const query = {};
+  const query = {};
   if (email) query.email = email;
-   
-   let sortQuery = { date: -1 };
-    
-   // Sort Conditions
+
+  // Default: কোন sort না দিলে নতুনটি আগে আসবে
+  let sortQuery = { date: -1 };
+
+  // Sort Conditions
   if (sort === "high") sortQuery = { amount: -1 };
   if (sort === "low") sortQuery = { amount: 1 };
   if (sort === "new") sortQuery = { date: -1 };
   if (sort === "old") sortQuery = { date: 1 };
+
   // MongoDB backend sorting
   const result = await transactionCollection
     .find(query)
