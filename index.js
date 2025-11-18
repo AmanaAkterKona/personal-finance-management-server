@@ -78,6 +78,8 @@ async function run() {
 
    const query = {};
   if (email) query.email = email;
+   
+   let sortQuery = { date: -1 };
 
   // MongoDB backend sorting
   const result = await transactionCollection
