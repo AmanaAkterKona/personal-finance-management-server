@@ -76,7 +76,8 @@ async function run() {
   const email = req.query.email;
   const sort = req.query.sort; // <-- frontend theke pathano sort type
 
-  
+   const query = {};
+  if (email) query.email = email;
 
   // MongoDB backend sorting
   const result = await transactionCollection
