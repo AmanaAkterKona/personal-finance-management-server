@@ -3,7 +3,18 @@ const cors = require("cors");
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
+
+
+
+const serviceAccount = require("./personal-firebase-admin-key.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
+
 
 //middleware
 
@@ -181,7 +192,7 @@ async function run() {
       });
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
