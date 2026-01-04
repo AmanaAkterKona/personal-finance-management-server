@@ -1,27 +1,24 @@
 const express = require("express");
 const cors = require("cors");
-require('dotenv').config()
+require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const admin = require("firebase-admin");
 const port = process.env.PORT || 3000;
 
+// index.js
+// const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, "base64").toString("utf8");
+// const serviceAccount = require(`./personal-firebase-admin-key.json`);
 
-
-const serviceAccount = require("./personal-firebase-admin-key.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-
-
-
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 //middleware
 
 app.use(cors());
 app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.kf9k4pw.mongodb.net/?appName=Cluster0`;
-  
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -31,18 +28,27 @@ const client = new MongoClient(uri, {
   },
 });
 
-app.get("/", (req, res) => {
-  res.send("Finance server is running");
-});
-
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("finance_db");
     const transactionCollection = db.collection("transactions");
     const usersCollection = db.collection("users");
+    const contactCollection = db.collection("contacts");
 
+    // Contact Message API
+    app.post("/contacts", async (req, res) => {
+      try {
+        const contactMessage = req.body;
+        contactMessage.submittedAt = new Date();
+
+        const result = await contactCollection.insertOne(contactMessage);
+        res.status(201).send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to save message", error });
+      }
+    });
     app.post("/users", async (req, res) => {
       const newUser = req.body;
 
@@ -57,38 +63,58 @@ async function run() {
       }
     });
 
-  
+   
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
 
+    
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email });
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
 
+    app.get("/transactions", async (req, res) => {
+      const email = req.query.email;
+      const sort = req.query.sort; // <-- frontend theke pathano sort type
 
-   app.get("/transactions", async (req, res) => {
-  const email = req.query.email;
-  const sort = req.query.sort; // <-- frontend theke pathano sort type
+      const query = {};
+      if (email) query.email = email;
 
-  const query = {};
-  if (email) query.email = email;
+      // Default: কোন sort না দিলে নতুনটি আগে আসবে
+      let sortQuery = { date: -1 };
 
-  // Default: কোন sort না দিলে নতুনটি আগে আসবে
-  let sortQuery = { date: -1 };
+      // Sort Conditions
+      if (sort === "high") sortQuery = { amount: -1 };
+      if (sort === "low") sortQuery = { amount: 1 };
+      if (sort === "new") sortQuery = { date: -1 };
+      if (sort === "old") sortQuery = { date: 1 };
 
-  // Sort Conditions
-  if (sort === "high") sortQuery = { amount: -1 };
-  if (sort === "low") sortQuery = { amount: 1 };
-  if (sort === "new") sortQuery = { date: -1 };
-  if (sort === "old") sortQuery = { date: 1 };
+      // MongoDB backend sorting
+      const result = await transactionCollection
+        .find(query)
+        .sort(sortQuery)
+        .toArray();
 
-  // MongoDB backend sorting
-  const result = await transactionCollection
-    .find(query)
-    .sort(sortQuery)
-    .toArray();
-
-  res.send(result);
-});
-
-
-
-
+      res.send(result);
+    });
 
     app.get("/transactions/:id", async (req, res) => {
       const id = req.params.id;
@@ -132,9 +158,6 @@ async function run() {
 
       res.send({ message: "Transaction deleted successfully", result });
     });
-
-
-    
 
     app.patch("/transactions/:id", async (req, res) => {
       const id = req.params.id;
@@ -200,6 +223,10 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+app.get("/", (req, res) => {
+  res.send("Finance server is running");
+});
 
 app.listen(port, () => {
   console.log(`Finance server is running on port:${port}`);
